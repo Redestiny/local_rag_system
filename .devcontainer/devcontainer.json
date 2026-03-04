@@ -9,7 +9,7 @@
   
   "overrideCommand": true,
 
-  "remoteUser": "vscode",
+  "remoteUser": "root",
   // 注入 Node.js 20 环境
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
