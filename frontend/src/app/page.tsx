@@ -14,47 +14,37 @@ export default function Dashboard() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isTyping) return; // 如果正在输入则拦截
 
-    const userMessage = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    setIsTyping(true); // 开启“思考中”状态
+    const startTime = Date.now(); // 记录起始时间戳
+
+    // 先把用户消息塞进对话列表
+    const userMsg = { role: "user", content: input };
+    setMessages(prev => [...prev, userMsg]);
     const currentInput = input;
-    setInput("");
-
-    // 开始计时
-    const startTime = Date.now();
+    setInput(""); // 清空输入框
 
     try {
-      // 1. 发起真实后端请求
       const response = await fetch("http://localhost:8000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: currentInput,
-          engine: "api" // 以后你可以通过点击左侧卡片来动态改变这个值
+          engine: engine // 动态传递当前选中的引擎
         }),
       });
 
       const data = await response.json();
+      setLatency(Date.now() - startTime); // 计算耗时：当前时间 - 起始时间
 
-      // 2. 计算并更新左侧卡片的延迟显示 (如果你想让 UI 更有趣，可以把这个 latency 存入 state)
-      const latency = Date.now() - startTime;
-      console.log(`推理延迟: ${latency}ms`);
-
-      // 3. 把真实的回复展示出来
       if (data.status === "success") {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.reply }
-        ]);
-      } else {
-        throw new Error(data.message);
+        setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
       }
-    } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `❌ 出错了: ${error.message}` }
-      ]);
+    } catch (err) {
+      console.error("连接后端失败", err);
+    } finally {
+      setIsTyping(false); // 无论成功失败，关闭“思考中”状态
     }
   };
 
@@ -86,6 +76,34 @@ export default function Dashboard() {
             <span className="ml-3 font-medium hidden lg:block">模型与系统配置</span>
           </a>
         </nav>
+
+        {/* 底部切换器容器 */}
+        {/* mt-auto 配合 flex-col 会将此 div 推到底部 */}
+        <div className="mt-auto border-t border-slate-100 p-4 bg-slate-50/30">
+          <p className="text-[10px] font-bold text-slate-400 mb-3 px-2 uppercase tracking-widest text-center">
+            推理引擎切换
+          </p>
+          <div className="bg-white p-1 rounded-xl flex gap-1 border border-slate-200 shadow-sm">
+            <button
+              onClick={() => setEngine("api")}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${engine === "api"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-500 hover:bg-slate-50"
+                }`}
+            >
+              云端 API
+            </button>
+            <button
+              onClick={() => setEngine("ollama")}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${engine === "ollama"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-500 hover:bg-slate-50"
+                }`}
+            >
+              本地模型
+            </button>
+          </div>
+        </div>
         
         {/* 用户头像区 */}
         <div className="p-4 border-t border-slate-100 flex justify-center lg:justify-start items-center bg-slate-50/50">
@@ -108,7 +126,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 text-sm">
             <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-              <span className="font-semibold text-slate-600">Ollama (本地) 已就绪</span>
+              <span className="font-semibold text-slate-600">{engine === 'api' ? 'DeepSeek 云端' : 'Ollama 本地'} 已就绪</span>
             </div>
           </div>
         </header>
@@ -125,7 +143,7 @@ export default function Dashboard() {
                 <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
                 <h3 className="text-slate-500 text-sm font-semibold mb-1">推理引擎状态</h3>
                 <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-3xl font-extrabold text-slate-800 tracking-tight">0</span>
+                  <span className="text-3xl font-extrabold text-slate-800 tracking-tight">{latency}</span>
                   <span className="text-sm font-medium text-slate-500">ms 延迟</span>
                 </div>
                 <div className="mt-5 flex items-center justify-between text-sm">
