@@ -29,7 +29,7 @@
         "bradlc.vscode-tailwindcss"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.defaultInterpreterPath": "/opt/venv/bin/python",
         "python.linting.enabled": true
       }
     }
