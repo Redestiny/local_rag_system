@@ -7,3 +7,4 @@ langchain-community==0.0.20
 chromadb==0.4.22
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.25
+openai==2.24.0
