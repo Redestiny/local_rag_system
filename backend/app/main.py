@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
 
 app = FastAPI(title="Nexus RAG API", version="1.0.0")
 
@@ -21,7 +22,8 @@ class ChatRequest(BaseModel):
     engine: str = "api"  # 默认使用 'api'，前端可以传 'ollama' 来切换
 
 # 3. 初始化大模型客户端
-API_KEY = "sk-1cc83057a70d4c969b1c7bde15883742"
+load_dotenv()  # 加载 .env 文件中的环境变量
+API_KEY = os.getenv("DEEPSEEK_API_KEY")
 API_BASE_URL = "https://api.deepseek.com/v1"
 
 # 4. 核心对话接口
