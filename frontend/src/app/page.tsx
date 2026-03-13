@@ -8,7 +8,7 @@ export default function Dashboard() {
   const [isTyping, setIsTyping] = useState(false);
   
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "系统初始化完成。本地 Ollama 引擎已就绪，ChromaDB 向量库已连接。有什么我可以帮您？" }
+    { role: "assistant", content: "系统初始化完成。LLM 引擎已就绪，ChromaDB 向量库已连接。有什么我可以帮您？" }
   ]);
   const [input, setInput] = useState("");
 
