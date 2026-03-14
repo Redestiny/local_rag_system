@@ -1,0 +1,19 @@
+# 此文件扩展主 docker-compose.yml，用于开发环境特有设置
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .           
+      dockerfile: .devcontainer/Dockerfile.dev
+    environment:
+      - HTTPS_PROXY=http://host.docker.internal:7897
+      - https_proxy=http://host.docker.internal:7897
+      - HTTP_PROXY=http://host.docker.internal:7897
+      - http_proxy=http://host.docker.internal:7897
+      - NO_PROXY=localhost,127.0.0.1
+      - no_proxy=localhost,127.0.0.1
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - ..:/workspaces/${localWorkspaceFolderBasename}  # 整个项目挂进去
+    command: sleep infinity

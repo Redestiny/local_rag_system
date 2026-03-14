@@ -6,20 +6,13 @@
   ],
   "service": "backend",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  
+
   "overrideCommand": true,
-
   "remoteUser": "root",
-  // 注入 Node.js 20 环境
-  "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
-    }
-  },
 
-  // 自动把集装箱里的 8000 和 3000 端口穿透到你的 Windows 上
+  // 转发后端和前端的端口
   "forwardPorts": [8000, 3000],
-  
+
   "customizations": {
     "vscode": {
       "extensions": [
@@ -34,10 +27,9 @@
       }
     }
   },
-  
-  // 开机自动安装：1. 后端 Python 依赖，2. 前端 Node 依赖
+
+  // 安装前端依赖
   "postCreateCommand": {
-    "backend": "pip install -r backend/requirements.txt",
-    "frontend": "npm install --prefix frontend"
+    "frontend": "npm install --prefix /workspaces/${localWorkspaceFolderBasename}/frontend"
   }
 }

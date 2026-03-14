@@ -46,7 +46,6 @@ build/
 
 # Docker
 docker-compose.override.yml
-docker-compose.*.yml
 *.dockerignore
 
 # Docker volumes / runtime data (local dev)
