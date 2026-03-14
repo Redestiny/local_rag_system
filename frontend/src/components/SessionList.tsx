@@ -27,7 +27,7 @@ export default function SessionList({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
-    <div className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shadow-sm">
+    <div className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm">
       <div className="p-4 border-b border-slate-100">
         <button
           onClick={onNewSession}
