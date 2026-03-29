@@ -10,3 +10,14 @@ class ChatResponse(BaseModel):
     reply: Optional[str] = None
     engine_used: Optional[str] = None
     message: Optional[str] = None
+
+class DocumentUploadResponse(BaseModel):
+    status: str
+    document_id: int
+    filename: str
+    chunks: int
+
+class ErrorResponse(BaseModel):
+    status: str = "error"
+    message: str
+    detail: Optional[str] = None
