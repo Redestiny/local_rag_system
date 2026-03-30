@@ -48,10 +48,10 @@ build/
 docker-compose.override.yml
 *.dockerignore
 
-# Docker volumes / runtime data (local dev)
-pg_data/
-chroma_data/
+# Runtime data
+Data/
 ollama_data/
+backend/uploads/
 
 # Database
 *.sqlite3

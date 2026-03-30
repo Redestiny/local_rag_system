@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -16,6 +17,11 @@ class DocumentUploadResponse(BaseModel):
     document_id: int
     filename: str
     chunks: int
+
+
+class VectorSearchRequest(BaseModel):
+    query: str
+    top_k: int = Field(default=10, ge=1, le=100)
 
 class ErrorResponse(BaseModel):
     status: str = "error"

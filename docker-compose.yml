@@ -1,49 +1,25 @@
-# Docker Compose 配置文件 - 编排所有容器
-# 包含：前端、后端、数据库等服务
-version: '3.8'
-
 services:
-  # 1. 关系型数据库 (PostgreSQL) - 用来存聊天记录和文件列表
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=rag_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-  # 2. 向量数据库 (ChromaDB) - 用来存文件切片后的向量数据
-  chromadb:
-    image: chromadb/chroma:latest
-    ports:
-      - "8001:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-
-  # 3. 后端 API 服务 (FastAPI)
   backend:
-    build: 
+    build:
       context: ./backend
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+    volumes:
+      - ./Data:/app/Data
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
-      - postgres
-      - chromadb
-      
-  # 开发时暂时注释掉这部分，防止多余容器占用资源
-  # # 4. 前端用户界面 (Next.js)
-  # frontend:
-  #   build: 
-  #     context: ./frontend
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - backend
-      
-volumes:
-  pg_data:
-  chroma_data:
+      - backend

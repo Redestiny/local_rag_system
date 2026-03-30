@@ -100,7 +100,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-100">
                   <span className="text-sm text-slate-600">嵌入模型</span>
-                  <span className="text-sm font-medium text-slate-800">text-embedding-3-small</span>
+                  <span className="text-sm font-medium text-slate-800">bge-small-zh-v1.5</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-100">
                   <span className="text-sm text-slate-600">当前引擎</span>

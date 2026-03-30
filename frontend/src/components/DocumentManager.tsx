@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { buildApiUrl } from "@/lib/api";
 
 interface Document {
   id: number;
@@ -18,7 +19,7 @@ export default function DocumentManager() {
   const fetchDocuments = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8000/api/documents/list");
+      const response = await fetch(buildApiUrl("/api/documents/list"));
       const data = await response.json();
       if (data.status === "success") {
         setDocuments(data.documents || []);
@@ -39,7 +40,7 @@ export default function DocumentManager() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:8000/api/documents/upload", {
+      const response = await fetch(buildApiUrl("/api/documents/upload"), {
         method: "POST",
         body: formData,
       });
@@ -59,7 +60,7 @@ export default function DocumentManager() {
     if (!confirm("确定要删除这个文档吗？")) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/documents/${id}`, {
+      const response = await fetch(buildApiUrl(`/api/documents/${id}`), {
         method: "DELETE",
       });
       const data = await response.json();

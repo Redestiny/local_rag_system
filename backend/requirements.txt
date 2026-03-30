@@ -5,8 +5,7 @@ pydantic==2.12.5
 pydantic-settings==2.13.1
 langchain==1.2.10
 langchain-community==0.4.1
-chromadb==1.5.2
-psycopg2-binary==2.9.11
+chromadb==1.5.5
 sqlalchemy==2.0.48
 openai==2.26.0
 opendataloader-pdf==2.2.0

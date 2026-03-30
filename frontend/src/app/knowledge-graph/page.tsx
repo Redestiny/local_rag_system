@@ -23,7 +23,7 @@ export default function KnowledgeGraphPage() {
 
   return (
     <MainLayout>
-      <div className="flex flex-col h-full">
+      <div className="flex h-full min-h-0 flex-col">
         <TopBar
           title="知识图谱"
           subtitle="向量数据库可视化与检索"
@@ -66,7 +66,7 @@ export default function KnowledgeGraphPage() {
           }
         />
 
-        <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-50 to-slate-100/50">
+        <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-br from-slate-50 to-slate-100/50">
           <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm">
             <div className="max-w-6xl mx-auto px-6">
               <div className="flex gap-1">
@@ -94,7 +94,7 @@ export default function KnowledgeGraphPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto p-6">
             <div className="max-w-6xl mx-auto">
               {activeTab === "vectors" ? (
                 <KnowledgeGraph searchQuery={searchQuery} />

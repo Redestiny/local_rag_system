@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, DateTime, Integer, String, Text
 from datetime import datetime
 from ..core.database import Base
 
@@ -30,23 +29,5 @@ class Document(Base):
     chunk_count = Column(Integer, default=0, nullable=False)
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    vectors = relationship("VectorMetadata", back_populates="document", cascade="all, delete-orphan")
-
     def __repr__(self):
         return f"<Document(id={self.id}, filename={self.filename}, status={self.status})>"
-
-
-class VectorMetadata(Base):
-    __tablename__ = "vector_metadata"
-
-    id = Column(Integer, primary_key=True, index=True)
-    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False, index=True)
-    chunk_index = Column(Integer, nullable=False)
-    chunk_text = Column(Text, nullable=False)
-    vector_id = Column(String(255), nullable=False, unique=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
-    document = relationship("Document", back_populates="vectors")
-
-    def __repr__(self):
-        return f"<VectorMetadata(id={self.id}, document_id={self.document_id}, chunk_index={self.chunk_index})>"
