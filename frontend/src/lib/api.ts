@@ -5,6 +5,7 @@ export type ApiProvider = "glm" | "deepseek" | "minimax";
 
 export interface ChatRequest {
   message: string;
+  session_id: string;
 }
 
 export interface ChatResponse {
@@ -54,6 +55,11 @@ export interface OllamaModelsResponse {
   models: ModelOption[];
 }
 
+export interface SessionDeleteResponse {
+  status: string;
+  session_id: string;
+}
+
 export interface VectorDocument {
   id: string;
   content: string;
@@ -96,14 +102,30 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   return (data ?? {}) as T;
 }
 
-export async function sendChatMessage(message: string): Promise<ChatResponse> {
+export async function sendChatMessage(
+  message: string,
+  sessionId: string
+): Promise<ChatResponse> {
   const response = await fetch(buildApiUrl("/api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, session_id: sessionId }),
   });
 
   return parseJsonResponse<ChatResponse>(response);
+}
+
+export async function deleteChatSession(
+  sessionId: string
+): Promise<SessionDeleteResponse> {
+  const response = await fetch(
+    buildApiUrl(`/api/chat/sessions/${encodeURIComponent(sessionId)}`),
+    {
+      method: "DELETE",
+    }
+  );
+
+  return parseJsonResponse<SessionDeleteResponse>(response);
 }
 
 export async function fetchLLMSettings(): Promise<LLMSettingsResponse> {

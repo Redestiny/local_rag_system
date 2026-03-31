@@ -15,6 +15,7 @@ from app.core.database import init_db
 from app.core.exceptions import DocumentProcessingError, EmbeddingError, VectorDBError, LLMError
 from app.core.logging import setup_logging
 from app.services.embedding import embedding_service
+from app.services.chat_service import MemoryAwareChatService
 from app.services.llm_settings import LLMSettingsService
 from app.services.vector_db import vector_db_service
 from app.services.rag_chain import RAGService
@@ -24,6 +25,7 @@ from app.services.llm_service import LLMService
 rag_service = RAGService(embedding_service, vector_db_service)
 llm_settings_service = LLMSettingsService()
 llm_service = LLMService(llm_settings_service)
+chat_service = MemoryAwareChatService(rag_service, llm_service)
 
 
 @asynccontextmanager

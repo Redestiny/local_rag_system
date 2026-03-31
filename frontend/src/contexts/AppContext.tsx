@@ -17,6 +17,7 @@ import type {
   ProviderCatalogEntry,
 } from "@/lib/api";
 import {
+  deleteChatSession,
   fetchLLMSettings,
   fetchOllamaModels,
   updateLLMSettings,
@@ -51,9 +52,10 @@ interface AppState {
   settingsSaving: boolean;
   settingsLoaded: boolean;
   settingsError: string | null;
+  sessionError: string | null;
 
   createSession: () => void;
-  deleteSession: (id: string) => void;
+  deleteSession: (id: string) => Promise<void>;
   switchSession: (id: string) => void;
   updateLatency: (ms: number) => void;
   addMessage: (sessionId: string, message: Message) => void;
@@ -63,6 +65,7 @@ interface AppState {
   refreshOllamaModels: () => Promise<ModelOption[]>;
   switchEngine: (engine: Engine) => Promise<void>;
   clearSettingsError: () => void;
+  clearSessionError: () => void;
   canUseEngine: (engine: Engine, candidateSettings?: LLMSettings) => boolean;
 }
 
@@ -147,6 +150,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
   const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (sessions.length > 0) {
@@ -212,6 +216,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSettingsError(null);
   }, []);
 
+  const clearSessionError = useCallback(() => {
+    setSessionError(null);
+  }, []);
+
   const canUseEngine = useCallback(
     (targetEngine: Engine, candidateSettings: LLMSettings = llmSettings) =>
       canUseEngineForSettings(candidateSettings, targetEngine),
@@ -242,6 +250,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const createSession = () => {
+    setSessionError(null);
     const newSession: Session = {
       id: generateId(),
       title: "新对话",
@@ -257,17 +266,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentSessionId(newSession.id);
   };
 
-  const deleteSession = (id: string) => {
-    setSessions((prev) => {
-      const filtered = prev.filter((session) => session.id !== id);
-      if (id === currentSessionId && filtered.length > 0) {
-        setCurrentSessionId(filtered[0].id);
+  const deleteSession = useCallback(
+    async (id: string) => {
+      setSessionError(null);
+
+      try {
+        await deleteChatSession(id);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "删除会话失败，请稍后重试。";
+        setSessionError(message);
+        return;
       }
-      return filtered;
-    });
-  };
+
+      setSessions((prev) => {
+        const filtered = prev.filter((session) => session.id !== id);
+        if (id === currentSessionId && filtered.length > 0) {
+          setCurrentSessionId(filtered[0].id);
+        }
+        return filtered;
+      });
+    },
+    [currentSessionId]
+  );
 
   const switchSession = (id: string) => {
+    setSessionError(null);
     setCurrentSessionId(id);
   };
 
@@ -314,6 +340,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         settingsSaving,
         settingsLoaded,
         settingsError,
+        sessionError,
         createSession,
         deleteSession,
         switchSession,
@@ -325,6 +352,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshOllamaModels,
         switchEngine,
         clearSettingsError,
+        clearSessionError,
         canUseEngine,
       }}
     >

@@ -1,33 +1,32 @@
 from fastapi import APIRouter, Depends
 import logging
-from ..schemas.pydantic import ChatRequest, ChatResponse
-from ..services.rag_chain import RAGService
-from ..services.llm_service import LLMService
+from sqlalchemy.orm import Session
+
+from ..core.database import get_db
+from ..schemas.pydantic import ChatRequest, ChatResponse, SessionDeleteResponse
+from ..services.chat_service import MemoryAwareChatService
 
 router = APIRouter()
 logger = logging.getLogger("nexus_rag.chat")
 
 
-def get_rag_service() -> RAGService:
-    from ..main import rag_service
-    return rag_service
-
-
-def get_llm_service() -> LLMService:
-    from ..main import llm_service
-    return llm_service
+def get_chat_service() -> MemoryAwareChatService:
+    from ..main import chat_service
+    return chat_service
 
 
 @router.post("/chat", response_model=ChatResponse)
 def chat_with_ai(
     request: ChatRequest,
-    rag_service: RAGService = Depends(get_rag_service),
-    llm_service: LLMService = Depends(get_llm_service)
+    chat_service: MemoryAwareChatService = Depends(get_chat_service),
+    db: Session = Depends(get_db),
 ):
-    logger.info("收到聊天请求: message_length=%s", len(request.message))
-    contexts = rag_service.retrieve_context(request.message)
-    prompt = rag_service.build_prompt(request.message, contexts) if contexts else request.message
-    result = llm_service.generate_response(prompt)
+    logger.info(
+        "收到聊天请求: session_id=%s, message_length=%s",
+        request.session_id,
+        len(request.message),
+    )
+    result = chat_service.chat(request.session_id, request.message, db)
     return ChatResponse(
         status="success",
         reply=result["reply"],
@@ -36,3 +35,12 @@ def chat_with_ai(
         model_used=result["model"],
     )
 
+
+@router.delete("/chat/sessions/{session_id}", response_model=SessionDeleteResponse)
+def delete_chat_session(
+    session_id: str,
+    chat_service: MemoryAwareChatService = Depends(get_chat_service),
+    db: Session = Depends(get_db),
+):
+    chat_service.clear_session_history(session_id, db)
+    return SessionDeleteResponse(status="success", session_id=session_id)

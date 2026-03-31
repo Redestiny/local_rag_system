@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     # RAG 配置
     RAG_TOP_K: int = 3
+    MEMORY_WINDOW_TURNS: int = 6
 
     # 超时配置
     OLLAMA_TIMEOUT: float = 120.0  # 2 minutes for local models

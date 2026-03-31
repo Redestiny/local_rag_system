@@ -9,6 +9,7 @@ ApiProvider = Literal["glm", "deepseek", "minimax"]
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: str
 
 class ChatResponse(BaseModel):
     status: str
@@ -72,6 +73,11 @@ class ModelOption(BaseModel):
 
 class OllamaModelsResponse(BaseModel):
     models: list[ModelOption]
+
+
+class SessionDeleteResponse(BaseModel):
+    status: str
+    session_id: str
 
 
 class ErrorResponse(BaseModel):

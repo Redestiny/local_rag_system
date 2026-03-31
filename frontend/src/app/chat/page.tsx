@@ -18,6 +18,7 @@ export default function ChatPage() {
     latency,
     llmSettings,
     providerCatalog,
+    sessionError,
   } = useApp();
   const providerLabel = getActiveProviderLabel(llmSettings, providerCatalog);
   const modelLabel = getActiveModel(llmSettings);
@@ -57,6 +58,13 @@ export default function ChatPage() {
             </div>
           }
         />
+        {sessionError && (
+          <div className="px-6 pt-4">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+              {sessionError}
+            </div>
+          </div>
+        )}
         <div className="flex flex-1 overflow-hidden">
           <SessionList
             sessions={sessions}

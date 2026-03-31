@@ -22,12 +22,28 @@ class RAGService:
 
         return results['documents'][0]
 
+    def format_contexts(self, contexts: List[str]) -> str:
+        if not contexts:
+            return "（本轮未检索到相关文档片段）"
+
+        return "\n\n".join(
+            [f"[文档片段 {i + 1}]\n{ctx}" for i, ctx in enumerate(contexts)]
+        )
+
+    def build_chain_input(self, query: str, top_k: int = None) -> dict[str, str | bool]:
+        contexts = self.retrieve_context(query, top_k=top_k)
+        return {
+            "question": query,
+            "context": self.format_contexts(contexts),
+            "has_context": bool(contexts),
+        }
+
     def build_prompt(self, query: str, contexts: List[str]) -> str:
         """构建带上下文的提示词"""
         if not contexts:
             return query
 
-        context_text = "\n\n".join([f"[文档片段 {i+1}]\n{ctx}" for i, ctx in enumerate(contexts)])
+        context_text = self.format_contexts(contexts)
 
         prompt = f"""基于以下文档内容回答问题：
 
@@ -38,5 +54,4 @@ class RAGService:
 请根据上述文档内容回答问题。如果文档中没有相关信息，请说明无法从提供的文档中找到答案。"""
 
         return prompt
-
 

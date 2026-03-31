@@ -33,7 +33,7 @@ export default function ChatInterface() {
     setInput("");
 
     try {
-      const data = await sendChatMessage(currentInput);
+      const data = await sendChatMessage(currentInput, currentSessionId);
       updateLatency(Date.now() - startTime);
 
       if (data.status === "success") {

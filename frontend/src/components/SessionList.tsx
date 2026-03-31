@@ -13,7 +13,7 @@ interface SessionListProps {
   sessions: Session[];
   currentSessionId: string;
   onSelectSession: (sessionId: string) => void;
-  onDeleteSession: (sessionId: string) => void;
+  onDeleteSession: (sessionId: string) => void | Promise<void>;
   onNewSession: () => void;
 }
 
@@ -79,7 +79,7 @@ export default function SessionList({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDeleteSession(session.id);
+                    void onDeleteSession(session.id);
                   }}
                   className="text-slate-400 hover:text-red-500 transition-colors p-1"
                 >
