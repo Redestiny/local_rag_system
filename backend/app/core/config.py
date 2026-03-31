@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     SQLITE_PATH: str = "Data/nexus_rag.sqlite3"
     CHROMA_PERSIST_DIR: str = "Data/chroma"
     UPLOAD_DIR: str = "Data/uploads"
+    LLM_SETTINGS_FILE: str = "Data/llm_settings.json"
 
     # API 密钥
     DEEPSEEK_API_KEY: str = ""
@@ -65,6 +66,10 @@ class Settings(BaseSettings):
         return self.resolve_path(self.UPLOAD_DIR)
 
     @property
+    def llm_settings_path(self) -> Path:
+        return self.resolve_path(self.LLM_SETTINGS_FILE)
+
+    @property
     def DATABASE_URL(self) -> str:
         return f"sqlite:///{self.sqlite_path.as_posix()}"
 
@@ -78,6 +83,7 @@ class Settings(BaseSettings):
         self.sqlite_path.parent.mkdir(parents=True, exist_ok=True)
         self.chroma_persist_path.mkdir(parents=True, exist_ok=True)
         self.upload_path.mkdir(parents=True, exist_ok=True)
+        self.llm_settings_path.parent.mkdir(parents=True, exist_ok=True)
 
     class Config:
         env_file = str(ENV_FILE)

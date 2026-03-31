@@ -1,16 +1,57 @@
 export type VectorMetadataValue = string | number | boolean | null;
 export type VectorMetadata = Record<string, VectorMetadataValue>;
+export type Engine = "api" | "ollama";
+export type ApiProvider = "glm" | "deepseek" | "minimax";
 
 export interface ChatRequest {
   message: string;
-  engine: "api" | "ollama";
 }
 
 export interface ChatResponse {
   status: string;
   reply: string;
   engine_used: string;
+  provider_used: string;
+  model_used: string;
   message?: string;
+}
+
+export interface ProviderConfig {
+  apiKey: string;
+  model: string;
+}
+
+export type ProvidersConfig = Record<ApiProvider, ProviderConfig>;
+
+export interface LLMSettings {
+  engine: Engine;
+  apiProvider: ApiProvider;
+  providers: ProvidersConfig;
+  ollama: {
+    model: string;
+  };
+}
+
+export interface ProviderCatalogEntry {
+  id: ApiProvider;
+  label: string;
+  description: string;
+  base_url: string;
+  models: string[];
+}
+
+export interface LLMSettingsResponse {
+  settings: LLMSettings;
+  provider_catalog: ProviderCatalogEntry[];
+}
+
+export interface ModelOption {
+  id: string;
+  name: string;
+}
+
+export interface OllamaModelsResponse {
+  models: ModelOption[];
 }
 
 export interface VectorDocument {
@@ -32,31 +73,64 @@ export function buildApiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
-export async function sendChatMessage(
-  message: string,
-  engine: "api" | "ollama"
-): Promise<ChatResponse> {
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  let data: Record<string, unknown> | null = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      data = null;
+    }
+  }
+
+  if (!response.ok) {
+    const message =
+      (typeof data?.detail === "string" && data.detail) ||
+      (typeof data?.message === "string" && data.message) ||
+      `HTTP error! status: ${response.status}`;
+    throw new Error(message);
+  }
+
+  return (data ?? {}) as T;
+}
+
+export async function sendChatMessage(message: string): Promise<ChatResponse> {
   const response = await fetch(buildApiUrl("/api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, engine }),
+    body: JSON.stringify({ message }),
   });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
+  return parseJsonResponse<ChatResponse>(response);
+}
 
-  return response.json();
+export async function fetchLLMSettings(): Promise<LLMSettingsResponse> {
+  const response = await fetch(buildApiUrl("/api/settings/llm"));
+  return parseJsonResponse<LLMSettingsResponse>(response);
+}
+
+export async function updateLLMSettings(
+  settings: LLMSettings
+): Promise<LLMSettingsResponse> {
+  const response = await fetch(buildApiUrl("/api/settings/llm"), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+
+  return parseJsonResponse<LLMSettingsResponse>(response);
+}
+
+export async function fetchOllamaModels(): Promise<OllamaModelsResponse> {
+  const response = await fetch(buildApiUrl("/api/settings/ollama/models"));
+  return parseJsonResponse<OllamaModelsResponse>(response);
 }
 
 export async function fetchVectors(): Promise<VectorDocument[]> {
   const response = await fetch(buildApiUrl("/api/vectors"));
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await parseJsonResponse<{ documents?: VectorDocument[] }>(response);
   return data.documents || [];
 }
 
@@ -70,10 +144,6 @@ export async function searchVectors(
     body: JSON.stringify({ query, top_k }),
   });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await parseJsonResponse<{ results?: VectorDocument[] }>(response);
   return data.results || [];
 }

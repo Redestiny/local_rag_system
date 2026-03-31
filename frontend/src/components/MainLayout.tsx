@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useApp } from "@/contexts/AppContext";
+import type { Engine } from "@/lib/api";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -10,7 +12,26 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
-  const { engine, setEngine } = useApp();
+  const {
+    engine,
+    settingsLoading,
+    settingsSaving,
+    switchEngine,
+    canUseEngine,
+    clearSettingsError,
+  } = useApp();
+  const [switchError, setSwitchError] = useState<string | null>(null);
+
+  const handleEngineSwitch = async (targetEngine: Engine) => {
+    setSwitchError(null);
+    clearSettingsError();
+
+    try {
+      await switchEngine(targetEngine);
+    } catch (err) {
+      setSwitchError(err instanceof Error ? err.message : "切换推理引擎失败");
+    }
+  };
 
   const navItems = [
     {
@@ -100,26 +121,44 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </p>
           <div className="bg-white p-1 rounded-xl flex gap-1 border border-slate-200 shadow-sm">
             <button
-              onClick={() => setEngine("api")}
+              onClick={() => void handleEngineSwitch("api")}
+              disabled={
+                settingsLoading ||
+                settingsSaving ||
+                (engine !== "api" && !canUseEngine("api"))
+              }
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
                 engine === "api"
                   ? "bg-indigo-600 text-white shadow-md"
-                  : "text-slate-500 hover:bg-slate-50"
+                  : "text-slate-500 hover:bg-slate-50 disabled:text-slate-300 disabled:hover:bg-transparent"
               }`}
             >
               API
             </button>
             <button
-              onClick={() => setEngine("ollama")}
+              onClick={() => void handleEngineSwitch("ollama")}
+              disabled={
+                settingsLoading ||
+                settingsSaving ||
+                (engine !== "ollama" && !canUseEngine("ollama"))
+              }
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
                 engine === "ollama"
                   ? "bg-indigo-600 text-white shadow-md"
-                  : "text-slate-500 hover:bg-slate-50"
+                  : "text-slate-500 hover:bg-slate-50 disabled:text-slate-300 disabled:hover:bg-transparent"
               }`}
             >
               本地
             </button>
           </div>
+          {(settingsLoading || settingsSaving) && (
+            <p className="mt-3 text-[11px] text-center text-slate-400">
+              {settingsLoading ? "正在同步配置..." : "正在保存配置..."}
+            </p>
+          )}
+          {switchError && (
+            <p className="mt-3 text-[11px] text-center text-rose-500">{switchError}</p>
+          )}
         </div>
       </aside>
 

@@ -5,9 +5,22 @@ import SessionList from "@/components/SessionList";
 import TopBar from "@/components/TopBar";
 import ChatInterface from "@/components/ChatInterface";
 import { useApp } from "@/contexts/AppContext";
+import { getActiveModel, getActiveProviderLabel } from "@/lib/llm";
 
 export default function ChatPage() {
-  const { sessions, currentSessionId, switchSession, deleteSession, createSession, engine, latency } = useApp();
+  const {
+    sessions,
+    currentSessionId,
+    switchSession,
+    deleteSession,
+    createSession,
+    engine,
+    latency,
+    llmSettings,
+    providerCatalog,
+  } = useApp();
+  const providerLabel = getActiveProviderLabel(llmSettings, providerCatalog);
+  const modelLabel = getActiveModel(llmSettings);
 
   return (
     <MainLayout>
@@ -30,9 +43,11 @@ export default function ChatPage() {
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-xs font-medium text-slate-600">
-                  {engine === "api" ? "API" : "本地"}
+                  {engine === "api" ? providerLabel : "Ollama"}
                 </span>
               </div>
+              <div className="w-px h-4 bg-slate-300"></div>
+              <span className="text-xs text-slate-500 max-w-44 truncate">{modelLabel}</span>
               {latency > 0 && (
                 <>
                   <div className="w-px h-4 bg-slate-300"></div>

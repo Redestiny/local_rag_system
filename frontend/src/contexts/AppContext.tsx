@@ -1,6 +1,30 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, {
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+import type {
+  Engine,
+  LLMSettings,
+  LLMSettingsResponse,
+  ModelOption,
+  ProviderCatalogEntry,
+} from "@/lib/api";
+import {
+  fetchLLMSettings,
+  fetchOllamaModels,
+  updateLLMSettings,
+} from "@/lib/api";
+import {
+  DEFAULT_LLM_SETTINGS,
+  canUseEngine as canUseEngineForSettings,
+} from "@/lib/llm";
 
 export interface Message {
   role: "user" | "assistant";
@@ -15,21 +39,31 @@ export interface Session {
   messages: Message[];
 }
 
-type Engine = "api" | "ollama";
-
 interface AppState {
   sessions: Session[];
   currentSessionId: string;
+  llmSettings: LLMSettings;
+  providerCatalog: ProviderCatalogEntry[];
+  ollamaModels: ModelOption[];
   engine: Engine;
   latency: number;
+  settingsLoading: boolean;
+  settingsSaving: boolean;
+  settingsLoaded: boolean;
+  settingsError: string | null;
 
   createSession: () => void;
   deleteSession: (id: string) => void;
   switchSession: (id: string) => void;
-  setEngine: (engine: Engine) => void;
   updateLatency: (ms: number) => void;
   addMessage: (sessionId: string, message: Message) => void;
   updateSessionTitle: (sessionId: string, title: string) => void;
+  refreshLLMSettings: () => Promise<void>;
+  saveLLMSettings: (settings: LLMSettings) => Promise<LLMSettings>;
+  refreshOllamaModels: () => Promise<ModelOption[]>;
+  switchEngine: (engine: Engine) => Promise<void>;
+  clearSettingsError: () => void;
+  canUseEngine: (engine: Engine, candidateSettings?: LLMSettings) => boolean;
 }
 
 interface StoredSession extends Omit<Session, "createdAt"> {
@@ -39,13 +73,12 @@ interface StoredSession extends Omit<Session, "createdAt"> {
 interface InitialAppState {
   sessions: Session[];
   currentSessionId: string;
-  engine: Engine;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
 function generateId() {
-  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `session_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function createInitialSession(): Session {
@@ -67,12 +100,10 @@ function loadInitialAppState(): InitialAppState {
     return {
       sessions: [],
       currentSessionId: "",
-      engine: "api",
     };
   }
 
   const savedSessions = localStorage.getItem("rag_sessions");
-  const savedEngine = localStorage.getItem("rag_engine") as Engine | null;
   const savedCurrentId = localStorage.getItem("rag_current_session");
 
   let sessions: Session[] = [];
@@ -88,25 +119,35 @@ function loadInitialAppState(): InitialAppState {
     sessions = [createInitialSession()];
   }
 
-  const currentSessionId = savedCurrentId && sessions.some((session) => session.id === savedCurrentId)
-    ? savedCurrentId
-    : sessions[0]?.id ?? "";
+  const currentSessionId =
+    savedCurrentId && sessions.some((session) => session.id === savedCurrentId)
+      ? savedCurrentId
+      : sessions[0]?.id ?? "";
 
   return {
     sessions,
     currentSessionId,
-    engine: savedEngine ?? "api",
   };
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [initialState] = useState<InitialAppState>(() => loadInitialAppState());
   const [sessions, setSessions] = useState<Session[]>(initialState.sessions);
-  const [currentSessionId, setCurrentSessionId] = useState<string>(initialState.currentSessionId);
-  const [engine, setEngine] = useState<Engine>(initialState.engine);
+  const [currentSessionId, setCurrentSessionId] = useState<string>(
+    initialState.currentSessionId
+  );
+  const [llmSettings, setLlmSettings] =
+    useState<LLMSettings>(DEFAULT_LLM_SETTINGS);
+  const [providerCatalog, setProviderCatalog] = useState<ProviderCatalogEntry[]>(
+    []
+  );
+  const [ollamaModels, setOllamaModels] = useState<ModelOption[]>([]);
   const [latency, setLatency] = useState<number>(0);
+  const [settingsLoading, setSettingsLoading] = useState<boolean>(true);
+  const [settingsSaving, setSettingsSaving] = useState<boolean>(false);
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
 
-  // Save to localStorage whenever sessions change
   useEffect(() => {
     if (sessions.length > 0) {
       localStorage.setItem("rag_sessions", JSON.stringify(sessions));
@@ -114,14 +155,91 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [sessions]);
 
   useEffect(() => {
-    localStorage.setItem("rag_engine", engine);
-  }, [engine]);
-
-  useEffect(() => {
     if (currentSessionId) {
       localStorage.setItem("rag_current_session", currentSessionId);
     }
   }, [currentSessionId]);
+
+  const applySettingsResponse = useCallback((data: LLMSettingsResponse) => {
+    setLlmSettings(data.settings);
+    setProviderCatalog(data.provider_catalog);
+    setSettingsLoaded(true);
+    setSettingsError(null);
+  }, []);
+
+  const refreshLLMSettings = useCallback(async () => {
+    setSettingsLoading(true);
+    try {
+      const data = await fetchLLMSettings();
+      applySettingsResponse(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "加载模型配置失败";
+      setSettingsError(message);
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, [applySettingsResponse]);
+
+  useEffect(() => {
+    void refreshLLMSettings();
+  }, [refreshLLMSettings]);
+
+  const saveLLMSettings = useCallback(
+    async (settings: LLMSettings) => {
+      setSettingsSaving(true);
+      try {
+        const data = await updateLLMSettings(settings);
+        applySettingsResponse(data);
+        return data.settings;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "保存模型配置失败";
+        setSettingsError(message);
+        throw err;
+      } finally {
+        setSettingsSaving(false);
+      }
+    },
+    [applySettingsResponse]
+  );
+
+  const refreshOllamaModels = useCallback(async () => {
+    const data = await fetchOllamaModels();
+    setOllamaModels(data.models);
+    return data.models;
+  }, []);
+
+  const clearSettingsError = useCallback(() => {
+    setSettingsError(null);
+  }, []);
+
+  const canUseEngine = useCallback(
+    (targetEngine: Engine, candidateSettings: LLMSettings = llmSettings) =>
+      canUseEngineForSettings(candidateSettings, targetEngine),
+    [llmSettings]
+  );
+
+  const switchEngine = useCallback(
+    async (targetEngine: Engine) => {
+      if (targetEngine === llmSettings.engine) {
+        return;
+      }
+
+      if (!canUseEngineForSettings(llmSettings, targetEngine)) {
+        const message =
+          targetEngine === "api"
+            ? "请先在设置页完成 API Provider、API Key 和模型配置"
+            : "请先在设置页选择可用的 Ollama 模型";
+        setSettingsError(message);
+        throw new Error(message);
+      }
+
+      await saveLLMSettings({
+        ...llmSettings,
+        engine: targetEngine,
+      });
+    },
+    [llmSettings, saveLLMSettings]
+  );
 
   const createSession = () => {
     const newSession: Session = {
@@ -141,8 +259,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteSession = (id: string) => {
     setSessions((prev) => {
-      const filtered = prev.filter((s) => s.id !== id);
-      // If deleting current session, switch to first available
+      const filtered = prev.filter((session) => session.id !== id);
       if (id === currentSessionId && filtered.length > 0) {
         setCurrentSessionId(filtered[0].id);
       }
@@ -162,7 +279,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return {
             ...session,
             messages: updatedMessages,
-            lastMessage: message.role === "user" ? message.content : session.lastMessage,
+            lastMessage:
+              message.role === "user" ? message.content : session.lastMessage,
           };
         }
         return session;
@@ -172,7 +290,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateSessionTitle = (sessionId: string, title: string) => {
     setSessions((prev) =>
-      prev.map((session) => (session.id === sessionId ? { ...session, title } : session))
+      prev.map((session) =>
+        session.id === sessionId ? { ...session, title } : session
+      )
     );
   };
 
@@ -185,15 +305,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         sessions,
         currentSessionId,
-        engine,
+        llmSettings,
+        providerCatalog,
+        ollamaModels,
+        engine: llmSettings.engine,
         latency,
+        settingsLoading,
+        settingsSaving,
+        settingsLoaded,
+        settingsError,
         createSession,
         deleteSession,
         switchSession,
-        setEngine,
         updateLatency,
         addMessage,
         updateSessionTitle,
+        refreshLLMSettings,
+        saveLLMSettings,
+        refreshOllamaModels,
+        switchEngine,
+        clearSettingsError,
+        canUseEngine,
       }}
     >
       {children}

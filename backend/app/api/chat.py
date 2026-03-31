@@ -24,10 +24,15 @@ def chat_with_ai(
     rag_service: RAGService = Depends(get_rag_service),
     llm_service: LLMService = Depends(get_llm_service)
 ):
-    logger.info(f"收到聊天请求: engine={request.engine}, message_length={len(request.message)}")
+    logger.info("收到聊天请求: message_length=%s", len(request.message))
     contexts = rag_service.retrieve_context(request.message)
     prompt = rag_service.build_prompt(request.message, contexts) if contexts else request.message
-    ai_reply = llm_service.generate_response(prompt, request.engine)
-    return ChatResponse(status="success", reply=ai_reply, engine_used=request.engine)
-
+    result = llm_service.generate_response(prompt)
+    return ChatResponse(
+        status="success",
+        reply=result["reply"],
+        engine_used=result["engine"],
+        provider_used=result["provider"],
+        model_used=result["model"],
+    )
 

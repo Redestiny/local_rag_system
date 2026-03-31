@@ -1,52 +1,55 @@
 from openai import OpenAI
 import logging
-from ..core.config import settings
 from ..core.exceptions import LLMError
+from .llm_settings import ActiveLLMConfig, LLMSettingsService
 
 logger = logging.getLogger("nexus_rag.llm")
 
 
 class LLMService:
-    def __init__(self):
-        self.ollama_client = None
-        self.deepseek_client = None
+    def __init__(self, llm_settings_service: LLMSettingsService):
+        self.llm_settings_service = llm_settings_service
+        self.clients = {}
 
-    def _get_ollama_client(self) -> OpenAI:
-        if not self.ollama_client:
-            self.ollama_client = OpenAI(
-                base_url=settings.OLLAMA_BASE_URL,
-                api_key="ollama",
-                timeout=settings.OLLAMA_TIMEOUT
+    def _get_client(self, config: ActiveLLMConfig) -> OpenAI:
+        cache_key = (config.base_url, config.api_key, config.timeout)
+        if cache_key not in self.clients:
+            self.clients[cache_key] = OpenAI(
+                base_url=config.base_url,
+                api_key=config.api_key,
+                timeout=config.timeout,
             )
-        return self.ollama_client
+        return self.clients[cache_key]
 
-    def _get_deepseek_client(self) -> OpenAI:
-        if not self.deepseek_client:
-            if not settings.DEEPSEEK_API_KEY:
-                raise LLMError("未配置 DEEPSEEK_API_KEY，无法使用 api 引擎")
-            self.deepseek_client = OpenAI(
-                base_url=settings.DEEPSEEK_BASE_URL,
-                api_key=settings.DEEPSEEK_API_KEY,
-                timeout=settings.DEEPSEEK_TIMEOUT
-            )
-        return self.deepseek_client
-
-    def generate_response(self, prompt: str, engine: str = "api") -> str:
+    def generate_response(self, prompt: str) -> dict[str, str]:
         try:
-            if engine == "ollama":
-                client = self._get_ollama_client()
-                model = settings.OLLAMA_MODEL
-            else:
-                client = self._get_deepseek_client()
-                model = settings.DEEPSEEK_MODEL
+            active_config = self.llm_settings_service.get_active_config()
+            client = self._get_client(active_config)
 
-            logger.info(f"LLM调用开始: engine={engine}, model={model}")
+            logger.info(
+                "LLM调用开始: engine=%s, provider=%s, model=%s",
+                active_config.engine,
+                active_config.provider,
+                active_config.model,
+            )
             response = client.chat.completions.create(
-                model=model,
+                model=active_config.model,
                 messages=[{"role": "user", "content": prompt}]
             )
-            logger.info(f"LLM调用成功: engine={engine}")
-            return response.choices[0].message.content
+            content = response.choices[0].message.content or ""
+            logger.info(
+                "LLM调用成功: engine=%s, provider=%s",
+                active_config.engine,
+                active_config.provider,
+            )
+            return {
+                "reply": content,
+                "engine": active_config.engine,
+                "provider": active_config.provider,
+                "model": active_config.model,
+            }
+        except LLMError:
+            raise
         except Exception as e:
-            logger.error(f"LLM调用失败: engine={engine}, error={str(e)}")
+            logger.error("LLM调用失败: %s", str(e))
             raise LLMError(f"LLM调用失败: {str(e)}")

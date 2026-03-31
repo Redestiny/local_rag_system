@@ -5,7 +5,8 @@ import { useApp, Message } from "@/contexts/AppContext";
 import { sendChatMessage } from "@/lib/api";
 
 export default function ChatInterface() {
-  const { sessions, currentSessionId, engine, addMessage, updateLatency, updateSessionTitle } = useApp();
+  const { sessions, currentSessionId, addMessage, updateLatency, updateSessionTitle } =
+    useApp();
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
@@ -32,7 +33,7 @@ export default function ChatInterface() {
     setInput("");
 
     try {
-      const data = await sendChatMessage(currentInput, engine);
+      const data = await sendChatMessage(currentInput);
       updateLatency(Date.now() - startTime);
 
       if (data.status === "success") {
@@ -43,7 +44,10 @@ export default function ChatInterface() {
       console.error("连接后端失败", err);
       const errorMsg: Message = {
         role: "assistant",
-        content: "抱歉，连接后端服务失败。请检查后端服务是否正常运行。",
+        content:
+          err instanceof Error
+            ? `抱歉，请求失败：${err.message}`
+            : "抱歉，连接后端服务失败。请检查后端服务是否正常运行。",
       };
       addMessage(currentSessionId, errorMsg);
     } finally {
