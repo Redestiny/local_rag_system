@@ -1,4 +1,6 @@
+import logging
 from pathlib import Path
+from threading import Lock
 from sentence_transformers import SentenceTransformer
 from typing import List
 from ..core.exceptions import EmbeddingError
@@ -7,11 +9,22 @@ from ..core.exceptions import EmbeddingError
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
 HF_CACHE_DIR = Path.home() / ".cache" / "huggingface"
 HF_HUB_MODEL_DIR = HF_CACHE_DIR / "hub" / "models--BAAI--bge-small-zh-v1.5"
+logger = logging.getLogger("nexus_rag.embedding")
 
 
 class EmbeddingService:
     def __init__(self):
-        self.model = self._load_model()
+        self.model: SentenceTransformer | None = None
+        self._model_lock = Lock()
+
+    def _get_model(self) -> SentenceTransformer:
+        if self.model is None:
+            with self._model_lock:
+                if self.model is None:
+                    logger.info("开始加载嵌入模型: %s", EMBEDDING_MODEL_NAME)
+                    self.model = self._load_model()
+                    logger.info("嵌入模型加载完成: %s", EMBEDDING_MODEL_NAME)
+        return self.model
 
     def _load_model(self) -> SentenceTransformer:
         local_snapshot = self._find_local_snapshot()
@@ -60,7 +73,7 @@ class EmbeddingService:
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """批量生成文本向量"""
-        embeddings = self.model.encode(texts)
+        embeddings = self._get_model().encode(texts)
         return embeddings.tolist()
 
     def embed_text(self, text: str) -> List[float]:

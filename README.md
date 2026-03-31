@@ -71,7 +71,7 @@ API 层
 
 #### 环境变量
 
-大部分配置都有默认值，通常只需要在项目根目录创建一个最小 `.env`：
+大部分配置都有默认值，本地开发通常可以不写 `.env`。如果你希望显式指定前端请求的 API 地址，可以在项目根目录写一个最小 `.env`：
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
@@ -81,7 +81,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 - API Provider 的 key 不再要求全部写进 `.env`；推荐在前端 `/settings` 页面中配置，后端会保存到 `Data/llm_settings.json`
 - 如果希望在 `Data/llm_settings.json` 首次创建时自动带入 DeepSeek 默认值，仍然可以在 `.env` 中写 `DEEPSEEK_API_KEY`
-- `NEXT_PUBLIC_API_URL` 在本地开发默认就是 `http://localhost:8000`，只有你想显式写出来时才需要加
+- `NEXT_PUBLIC_API_URL` 在本地开发不是必需项；不写时前端会通过同源 `/api` 代理访问后端
 - 其余参数如 `CHUNK_SIZE`、`RAG_TOP_K`、`SQLITE_PATH` 都已有默认值，只有想覆盖默认行为时才需要写
 
 #### 启动后端
@@ -116,10 +116,11 @@ Windows 提示：
 
 根目录 `docker-compose.yml` 仅用于部署。
 
-- `backend` 和 `frontend` 由 Docker 编排
-- `Data/` 会挂载进 backend 容器，保证 SQLite 和 Chroma 数据持久化
-- Ollama 仍运行在宿主机，backend 容器通过 `host.docker.internal` 访问
-- compose 只注入必须和本地默认值不同的变量；像 `CHUNK_SIZE` 这类已有默认值的配置不再写进 compose
+- Docker 现在使用根目录单一 `Dockerfile` 构建一个同时包含前后端的镜像
+- 容器内 `Next.js` 监听 `10113`，`FastAPI` 监听 `8000`，浏览器统一通过 `10113` 访问应用
+- `/api`、`/docs`、`/redoc` 与 `/openapi.json` 会由前端服务转发到容器内的 FastAPI
+- `Data/` 会挂载进容器，保证 SQLite 和 Chroma 数据持久化
+- Ollama 仍运行在宿主机，容器通过 `host.docker.internal` 访问
 
 启动命令：
 
@@ -127,13 +128,18 @@ Windows 提示：
 docker compose up -d --build
 ```
 
+默认访问地址：
+
+- 应用首页：`http://localhost:10113`
+- FastAPI 文档：`http://localhost:10113/docs`
+
 ## 4. 环境变量
 
-**必需配置：**
+**常用配置：**
 
 | 变量名 | 说明 |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | 浏览器访问的后端地址（默认 `http://localhost:8000`） |
+| `NEXT_PUBLIC_API_URL` | 前端请求 API 的基地址；本地开发可设为 `http://localhost:8000`，Docker 单容器部署默认使用同源 `/` |
 
 **可选配置：**
 
@@ -144,6 +150,7 @@ docker compose up -d --build
 - 路径变量支持相对路径，默认都相对项目根目录解析
 - `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` / `OLLAMA_MODEL` 仅在 `Data/llm_settings.json` 不存在时用于首次 bootstrap，不会在后续加载时回填已有配置
 - Docker 部署时 `OLLAMA_BASE_URL` 由 compose 固定设置为 `http://host.docker.internal:11434/v1`
+- Docker 部署默认通过同源代理访问后端，因此外部只需要暴露 `10113`
 - 不要提交任何真实密钥到仓库
 
 ## 5. 使用指南
@@ -300,6 +307,7 @@ docker compose up -d --build
 ```text
 Local_RAG_System/
 ├─ Data/                    # 运行时数据目录（自动创建）
+├─ Dockerfile
 ├─ backend/
 │  ├─ app/
 │  │  ├─ api/
@@ -309,13 +317,12 @@ Local_RAG_System/
 │  │  ├─ schemas/
 │  │  ├─ services/
 │  │  └─ main.py
-│  ├─ requirements.txt
-│  └─ Dockerfile
+│  └─ requirements.txt
 ├─ frontend/
 │  ├─ src/
-│  ├─ package.json
-│  └─ Dockerfile
+│  └─ package.json
 ├─ docker-compose.yml
+├─ start.sh
 └─ README.md
 ```
 
@@ -332,16 +339,16 @@ Local_RAG_System/
 1. Ollama 已在宿主机启动
 2. 模型已经拉取
 3. 本地开发时 `OLLAMA_BASE_URL=http://localhost:11434/v1`
-4. Docker 部署时 backend 容器能访问 `host.docker.internal`
-5. 可访问 `/api/settings/ollama/models` 并返回已安装模型列表
+4. Docker 部署时应用容器能访问 `host.docker.internal`
+5. 可访问 `http://localhost:10113/api/settings/ollama/models` 并返回已安装模型列表
 
 ### Q3：前端打不开后端接口
 
 请确认：
 
 1. backend 正在运行
-2. `NEXT_PUBLIC_API_URL` 指向浏览器可访问的后端地址
-3. `http://localhost:8000/docs` 或 `${NEXT_PUBLIC_API_URL}/docs` 可以访问
+2. 本地开发时 `NEXT_PUBLIC_API_URL` 指向浏览器可访问的后端地址，通常是 `http://localhost:8000`
+3. Docker 部署时直接访问 `http://localhost:10113/docs`
 
 ### Q4：Windows 本地启动 backend 时提示 Chroma 只读或拒绝访问
 

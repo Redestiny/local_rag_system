@@ -47,6 +47,7 @@ build/
 # Docker
 docker-compose.override.yml
 *.dockerignore
+!/.dockerignore
 
 # Runtime data
 Data/

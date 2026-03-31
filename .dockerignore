@@ -1,0 +1,11 @@
+.git
+.gitignore
+.DS_Store
+Data
+backend/__pycache__
+backend/.pytest_cache
+frontend/.next
+frontend/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

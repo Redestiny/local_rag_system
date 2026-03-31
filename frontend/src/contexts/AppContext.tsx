@@ -188,6 +188,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void refreshLLMSettings();
   }, [refreshLLMSettings]);
 
+  useEffect(() => {
+    if (settingsLoaded || settingsLoading) {
+      return;
+    }
+
+    const retryTimer = window.setTimeout(() => {
+      void refreshLLMSettings();
+    }, 2000);
+
+    return () => {
+      window.clearTimeout(retryTimer);
+    };
+  }, [refreshLLMSettings, settingsLoaded, settingsLoading]);
+
   const saveLLMSettings = useCallback(
     async (settings: LLMSettings) => {
       setSettingsSaving(true);

@@ -72,11 +72,16 @@ export interface VectorSearchRequest {
   top_k: number;
 }
 
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  configuredApiBaseUrl && configuredApiBaseUrl !== "/"
+    ? configuredApiBaseUrl.replace(/\/$/, "")
+    : "";
 
 export function buildApiUrl(path: string): string {
-  return `${API_BASE_URL}${path}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
 }
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
