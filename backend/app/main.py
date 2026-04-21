@@ -5,6 +5,7 @@ from app.api.chat import router as chat_router
 from app.api.document import router as document_router
 from app.api.settings import router as settings_router
 from app.api.vector import router as vector_router
+from app.api.templates import router as templates_router
 from app.api.error_handlers import (
     document_processing_error_handler,
     embedding_error_handler,
@@ -58,3 +59,4 @@ app.include_router(chat_router, prefix="/api", tags=["chat"])
 app.include_router(document_router, prefix="/api/documents", tags=["documents"])
 app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
 app.include_router(vector_router, prefix="/api/vectors", tags=["vectors"])
+app.include_router(templates_router, prefix="/api/templates", tags=["templates"])

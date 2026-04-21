@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -84,3 +85,55 @@ class ErrorResponse(BaseModel):
     status: str = "error"
     message: str
     detail: Optional[str] = None
+
+
+# Template schemas
+class DocumentInfo(BaseModel):
+    id: int
+    filename: str
+    status: str
+    chunk_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class TemplateBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+
+
+class TemplateCreate(TemplateBase):
+    pass
+
+
+class TemplateUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    document_ids: Optional[list[int]] = None
+
+
+class TemplateInfo(TemplateBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TemplateWithDocuments(TemplateInfo):
+    documents: list[DocumentInfo] = []
+
+
+class TemplateListResponse(BaseModel):
+    templates: list[TemplateWithDocuments]
+
+
+class TemplateResponse(BaseModel):
+    status: str
+    template: Optional[TemplateWithDocuments] = None
+    message: Optional[str] = None
+
+
+class TemplateDeleteResponse(BaseModel):
+    status: str
+    template_id: int

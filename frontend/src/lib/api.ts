@@ -174,3 +174,84 @@ export async function searchVectors(
   const data = await parseJsonResponse<{ results?: VectorDocument[] }>(response);
   return data.results || [];
 }
+
+// Template types
+export interface DocumentInfo {
+  id: number;
+  filename: string;
+  status: string;
+  chunk_count: number;
+}
+
+export interface TemplateInfo {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  documents: DocumentInfo[];
+}
+
+export interface TemplateListResponse {
+  templates: TemplateInfo[];
+}
+
+export interface TemplateResponse {
+  status: string;
+  template?: TemplateInfo;
+  message?: string;
+}
+
+export interface TemplateCreate {
+  name: string;
+}
+
+export interface TemplateUpdate {
+  name?: string;
+  document_ids?: number[];
+}
+
+export interface DocumentListResponse {
+  status: string;
+  documents: DocumentInfo[];
+}
+
+// Template API functions
+export async function fetchTemplates(): Promise<TemplateListResponse> {
+  const response = await fetch(buildApiUrl("/api/templates"));
+  return parseJsonResponse<TemplateListResponse>(response);
+}
+
+export async function createTemplate(name: string): Promise<TemplateResponse> {
+  const response = await fetch(buildApiUrl("/api/templates"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return parseJsonResponse<TemplateResponse>(response);
+}
+
+export async function updateTemplate(
+  templateId: number,
+  data: TemplateUpdate
+): Promise<TemplateResponse> {
+  const response = await fetch(buildApiUrl(`/api/templates/${templateId}`), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return parseJsonResponse<TemplateResponse>(response);
+}
+
+export async function deleteTemplate(
+  templateId: number
+): Promise<{ status: string; template_id: number }> {
+  const response = await fetch(buildApiUrl(`/api/templates/${templateId}`), {
+    method: "DELETE",
+  });
+  return parseJsonResponse(response);
+}
+
+export async function fetchAllDocuments(): Promise<DocumentListResponse> {
+  const response = await fetch(buildApiUrl("/api/templates/documents/all"));
+  return parseJsonResponse<DocumentListResponse>(response);
+}
