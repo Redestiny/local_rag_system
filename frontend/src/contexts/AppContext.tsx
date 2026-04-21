@@ -63,7 +63,6 @@ interface AppState {
   refreshLLMSettings: () => Promise<void>;
   saveLLMSettings: (settings: LLMSettings) => Promise<LLMSettings>;
   refreshOllamaModels: () => Promise<ModelOption[]>;
-  switchEngine: (engine: Engine) => Promise<void>;
   clearSettingsError: () => void;
   clearSessionError: () => void;
   canUseEngine: (engine: Engine, candidateSettings?: LLMSettings) => boolean;
@@ -92,7 +91,7 @@ function createInitialSession(): Session {
     messages: [
       {
         role: "assistant",
-        content: "系统初始化完成。LLM 引擎已就绪，ChromaDB 向量库已连接。有什么我可以帮您？",
+        content: "系统初始化完成。有什么我可以帮您？",
       },
     ],
   };
@@ -240,29 +239,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [llmSettings]
   );
 
-  const switchEngine = useCallback(
-    async (targetEngine: Engine) => {
-      if (targetEngine === llmSettings.engine) {
-        return;
-      }
-
-      if (!canUseEngineForSettings(llmSettings, targetEngine)) {
-        const message =
-          targetEngine === "api"
-            ? "请先在设置页完成 API Provider、API Key 和模型配置"
-            : "请先在设置页选择可用的 Ollama 模型";
-        setSettingsError(message);
-        throw new Error(message);
-      }
-
-      await saveLLMSettings({
-        ...llmSettings,
-        engine: targetEngine,
-      });
-    },
-    [llmSettings, saveLLMSettings]
-  );
-
   const createSession = () => {
     setSessionError(null);
     const newSession: Session = {
@@ -272,7 +248,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       messages: [
         {
           role: "assistant",
-          content: "系统初始化完成。LLM 引擎已就绪，ChromaDB 向量库已连接。有什么我可以帮您？",
+          content: "系统初始化完成。有什么我可以帮您？",
         },
       ],
     };
@@ -364,7 +340,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshLLMSettings,
         saveLLMSettings,
         refreshOllamaModels,
-        switchEngine,
         clearSettingsError,
         clearSessionError,
         canUseEngine,
